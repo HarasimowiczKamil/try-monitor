@@ -4,17 +4,18 @@
   "description": "HTTP host monitor in system tray",
   "main": "dist-electron/main.js",
   "scripts": {
+    "generate-icon": "node scripts/generate-icon.mjs",
     "dev:renderer": "vite",
     "dev:electron": "tsc -p tsconfig.node.json && electron .",
     "build:renderer": "vite build",
     "build:electron": "tsc -p tsconfig.node.json && copy /Y electron\\preload.cjs dist-electron\\preload.cjs",
     "build": "vite build && tsc -p tsconfig.node.json && copy /Y electron\\preload.cjs dist-electron\\preload.cjs",
     "start": "vite build && tsc -p tsconfig.node.json && copy /Y electron\\preload.cjs dist-electron\\preload.cjs && electron .",
-    "package": "vite build && tsc -p tsconfig.node.json && copy /Y electron\\preload.cjs dist-electron\\preload.cjs && electron-builder"
+    "package": "node scripts/generate-icon.mjs && vite build && tsc -p tsconfig.node.json && copy /Y electron\\preload.cjs dist-electron\\preload.cjs && electron-builder"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Try Monitor Team",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "react": "^18.3.1",

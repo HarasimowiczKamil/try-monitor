@@ -6,23 +6,29 @@ echo.
 
 set PATH=%PATH%;C:\Program Files\nodejs
 
-echo [1/3] Building renderer...
+echo [0/4] Generating app icon...
+call npx.cmd node scripts/generate-icon.mjs
+if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
+
+echo [1/4] Building renderer...
 call npx.cmd vite build
 if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
-echo [2/3] Building main process...
+echo [2/4] Building main process...
 call npx.cmd tsc -p tsconfig.node.json
 if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
 copy /Y electron\preload.cjs dist-electron\preload.cjs
 
-echo [3/3] Building NSIS installer...
-call npx.cmd electron-builder --win nsis
+echo [3/4] Building installer (MSI + NSIS)...
+call npx.cmd electron-builder
 
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo === Done! Installer in release\ folder ===
 ) else (
     echo.
-    echo === Failed - try running as Administrator ===
+    echo === Failed ===
+    echo If the error mentions winCodeSign or 7z, run this script as Administrator.
+    echo Otherwise, check the output above for details.
 )

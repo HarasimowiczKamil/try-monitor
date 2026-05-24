@@ -13,7 +13,7 @@ Electron + TypeScript + React desktop app for HTTP/Ping host monitoring in syste
 try-monitor/
 ├── electron/
 │   ├── main.ts                  # Main process: tray, config, checker runner, IPC
-│   ├── preload.cjs              # Context bridge (contextIsolation: true, CommonJS)
+│   ├── preload.cjs              # Context bridge (contextIsolation: true, sandbox: true)
 │   └── checkers/
 │       ├── types.ts             # Shared types (HostConfig, CheckResult, LogEntry)
 │       ├── registry.ts          # Checker registry (type → check function)
@@ -35,14 +35,21 @@ try-monitor/
 ├── translations/
 │   ├── pl.json
 │   └── en.json
+├── scripts/
+│   └── generate-icon.mjs        # Generates build/icon.ico (16, 32, 48px circle icon)
+├── build/
+│   └── icon.ico                 # App icon for electron-builder
 ├── dist/                        # Vite build output (renderer)
 ├── dist-electron/               # TypeScript output (main process)
-├── index.html                   # HTML entry with CSP
+├── index.html                   # HTML entry with CSP (default-src 'self')
+├── electron-builder.yml         # NSIS installer config
+├── build.bat                    # Full build automation script (run as Admin)
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json                # Renderer TS config
 ├── tsconfig.node.json           # Main process TS config
-└── AGENTS.md
+├── AGENTS.md
+└── .gitignore
 ```
 
 ## Checker System
@@ -59,13 +66,15 @@ Each checker lives in `electron/checkers/<type>/` with its own directory:
 The type selector in the add-host dialog is a `<select>` populated dynamically from the UI registry with name and description.
 
 ## Scripts
-| Command                                   | Description                              |
-|-------------------------------------------|------------------------------------------|
-| `vite build`                              | Build renderer to `dist/`                |
-| `tsc -p tsconfig.node.json`               | Compile main process to `dist-electron/` |
-| `vite build && tsc -p tsconfig.node.json` | Full build                               |
-| `electron .`                              | Run the app (after build)                |
-| `electron-builder`                        | Package for distribution                 |
+| Command                                         | Description                              |
+|-------------------------------------------------|------------------------------------------|
+| `npm run generate-icon`                         | Generate `build/icon.ico` (16/32/48 px)  |
+| `npm run build`                                 | Build renderer + main process            |
+| `npm run start`                                 | Build + run app                          |
+| `npm run package`                               | Full build + NSIS installer              |
+| `npm run dev:renderer`                          | Vite dev server                          |
+| `npm run dev:electron`                          | Compile main + run electron              |
+| `.\build.bat`                                   | Full build + installer (run as Admin)    |
 
 ## Key Files
 - `electron/main.ts`: App lifecycle, tray icon (16x16 RGBA colored circle), config load/save (`%APPDATA%/try-monitor/config.json`), checker runner with `startChecker()`, IPC handlers, two BrowserWindows (settings + logs) with hash routing
@@ -74,6 +83,7 @@ The type selector in the add-host dialog is a `<select>` populated dynamically f
 - `src/App.tsx`: Hash-based routing (`#settings` / `#logs`), loads config/results/logs on mount, subscribes to live updates
 - `src/checkers/registry.tsx`: Maps checker type → React form component + label translations, `getLabel()` helper
 - `src/components/Settings.tsx`: Two tabs (Monitor hosts list, General settings), add-host dialog with dynamic type-specific form
+- `scripts/generate-icon.mjs`: Generates `build/icon.ico` with a green circle in 3 sizes
 
 ## Config
 - Path: `%APPDATA%/try-monitor/config.json`
@@ -90,21 +100,30 @@ The type selector in the add-host dialog is a `<select>` populated dynamically f
 - HTTP example: `12:34:56  https://example.com  200 OK (1.2 KB)`
 - Ping example: `12:34:57  google.com  12 ms`
 
+## Security Checklist
+- `nodeIntegration: false`, `contextIsolation: true`, `sandbox: true` on all BrowserWindows
+- CSP via `<meta>` tag: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'`
+- `will-navigate` handler blocks navigation outside `file://` or VITE_DEV_SERVER_URL
+- `save-config` IPC validates `event.senderFrame.url` before accepting
+- Preload uses `contextBridge.exposeInMainWorld` with callback wrapping (no raw `ipcRenderer` exposed)
+- `Menu.setApplicationMenu(null)` called at startup
+- Config I/O uses async `fs/promises` (non-blocking)
+
 ## Building
-```powershell
-# Fix npm not in PATH (PowerShell issue):
-$env:Path += ";C:\Program Files\nodejs;C:\path\to\project\node_modules\.bin"
+```cmd
+:: Quick build + run:
+npm run start
 
-# Build:
-npx vite build
-npx tsc -p tsconfig.node.json
-copy /Y electron\preload.cjs dist-electron\preload.cjs
+:: Full installer:
+npm run package
 
-# Run:
-npx electron .
+:: Or via build.bat (run As Administrator for winCodeSign):
+.\build.bat
 ```
 
 ## Electron Binary Issues
 - `npm install` downloads electron but install.js may fail silently
 - Manual fix: `Expand-Archive` the cached zip from `%LOCALAPPDATA%\electron\Cache\*\*.zip` into `node_modules\electron\dist`, then write `electron.exe` to `node_modules\electron\path.txt`
 - Ensure `path.txt` contains just `electron.exe` (no newline)
+- `npm run` uses `node_modules\.bin` so it works without adding npm to PATH; for bare `npx` calls, prepend `$env:Path += ";C:\Program Files\nodejs"` in PowerShell
+- PowerShell blocks `npm.ps1` by default (execution policy); use `npm.cmd` instead (e.g., `& "C:\Program Files\nodejs\npm.cmd" run build`)

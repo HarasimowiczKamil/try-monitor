@@ -6,6 +6,8 @@ interface Config {
   interval: number
   language: string
   maxLogs: number
+  theme: 'light' | 'dark' | 'system'
+  notifications: boolean
 }
 
 interface CheckResult {
@@ -26,9 +28,13 @@ const translations: Record<string, Record<string, string>> = {
   pl: {
     hosts_tab: 'Monitor',
     general_tab: 'Ogólne',
+    theme: 'Wygląd',
+    theme_light: 'Jasny',
+    theme_dark: 'Ciemny',
+    theme_system: 'Systemowy',
+    notifications: 'Powiadomienia o błędach',
     hosts: 'Hosty do monitorowania',
-    interval: 'Interwał sprawdzania',
-    interval_unit: 's',
+    interval: 'Interwał sprawdzania (s)',
     language: 'Język',
     max_logs: 'Zachowane logi',
     type: 'Typ',
@@ -44,9 +50,13 @@ const translations: Record<string, Record<string, string>> = {
   en: {
     hosts_tab: 'Monitor',
     general_tab: 'General',
+    theme: 'Theme',
+    theme_light: 'Light',
+    theme_dark: 'Dark',
+    theme_system: 'System',
+    notifications: 'Error notifications',
     hosts: 'Hosts to monitor',
-    interval: 'Check interval',
-    interval_unit: 's',
+    interval: 'Check interval (s)',
     language: 'Language',
     max_logs: 'Keep logs',
     type: 'Type',
@@ -73,6 +83,8 @@ export default function Settings({ config, results, onSave }: Props) {
   const [interval, setInterval] = useState(config.interval.toString())
   const [language, setLanguage] = useState(config.language)
   const [maxLogs, setMaxLogs] = useState(config.maxLogs.toString())
+  const [theme, setTheme] = useState(config.theme || 'system')
+  const [notifications, setNotifications] = useState(config.notifications !== false)
   const [showDialog, setShowDialog] = useState(false)
   const [selectedType, setSelectedType] = useState('http')
   const [newConfig, setNewConfig] = useState<any>({ type: 'http', url: '', method: 'GET' })
@@ -86,18 +98,27 @@ export default function Settings({ config, results, onSave }: Props) {
   onSaveRef.current = onSave
   const isFirstRender = useRef(true)
 
-  const doSave = useCallback((h: any[], i: string, l: string, m: string) => {
+  const doSave = useCallback((h: any[], i: string, l: string, m: string, t: string, n: boolean) => {
     const intervalNum = parseInt(i, 10)
     const maxLogsNum = parseInt(m, 10)
     if (h.length > 0 && !isNaN(intervalNum) && intervalNum >= 5 && !isNaN(maxLogsNum) && maxLogsNum >= 1) {
-      onSaveRef.current({ hosts: h, interval: intervalNum, language: l, maxLogs: maxLogsNum })
+      onSaveRef.current({ hosts: h, interval: intervalNum, language: l, maxLogs: maxLogsNum, theme: t as Config['theme'], notifications: n })
     }
   }, [])
 
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return }
-    doSave(hosts, interval, language, maxLogs)
-  }, [hosts, interval, language, maxLogs, doSave])
+    doSave(hosts, interval, language, maxLogs, theme, notifications)
+  }, [hosts, interval, language, maxLogs, theme, notifications, doSave])
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (theme === 'system') {
+      delete root.dataset.theme
+    } else {
+      root.dataset.theme = theme
+    }
+  }, [theme])
 
   useEffect(() => {
     if (showDialog && inputRef.current) {
@@ -200,23 +221,43 @@ export default function Settings({ config, results, onSave }: Props) {
       {tab === 1 && (
         <div className="tab-content">
           <div className="field-row">
+            <label>{t('theme')}</label>
+            <div className="field-control">
+              <select value={theme} onChange={e => setTheme(e.target.value)}>
+                <option value="system">{t('theme_system')}</option>
+                <option value="light">{t('theme_light')}</option>
+                <option value="dark">{t('theme_dark')}</option>
+              </select>
+            </div>
+          </div>
+          <div className="field-row">
             <label>{t('interval')}</label>
             <div className="field-control">
               <input type="number" value={interval} onChange={e => setInterval(e.target.value)} min={5} className={!intervalValid ? 'input-error' : ''} />
-              <span className="field-unit">{t('interval_unit')}</span>
             </div>
           </div>
           <div className="field-row">
             <label>{t('language')}</label>
-            <select value={language} onChange={e => setLanguage(e.target.value)}>
-              <option value="pl">polski</option>
-              <option value="en">English</option>
-            </select>
+            <div className="field-control">
+              <select value={language} onChange={e => setLanguage(e.target.value)}>
+                <option value="pl">Polski</option>
+                <option value="en">English</option>
+              </select>
+            </div>
           </div>
           <div className="field-row">
             <label>{t('max_logs')}</label>
             <div className="field-control">
               <input type="number" value={maxLogs} onChange={e => setMaxLogs(e.target.value)} min={1} className={!maxLogsValid ? 'input-error' : ''} />
+            </div>
+          </div>
+          <div className="field-row">
+            <label>{t('notifications')}</label>
+            <div className="field-control">
+              <label className="switch">
+                <input type="checkbox" checked={notifications} onChange={e => setNotifications(e.target.checked)} />
+                <span className="slider"></span>
+              </label>
             </div>
           </div>
         </div>

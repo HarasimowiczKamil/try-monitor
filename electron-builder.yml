@@ -1,6 +1,7 @@
-appId: com.try-monitor.app
+appId: TryMonitor
+icon: build/icon.ico
 productName: Try Monitor
-copyright: Copyright © 2025
+copyright: Copyright © 2026
 
 directories:
   output: release
@@ -13,6 +14,9 @@ files:
 win:
   target:
     - target: nsis
+      arch:
+        - x64
+    - target: msi
       arch:
         - x64
   certificateFile: null

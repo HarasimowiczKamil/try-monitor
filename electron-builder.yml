@@ -1,0 +1,26 @@
+appId: com.try-monitor.app
+productName: Try Monitor
+copyright: Copyright © 2025
+
+directories:
+  output: release
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  certificateFile: null
+  certificatePassword: null
+
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false

@@ -11,6 +11,9 @@
     "build:electron": "tsc -p tsconfig.node.json && copy /Y electron\\preload.cjs dist-electron\\preload.cjs",
     "build": "vite build && tsc -p tsconfig.node.json && copy /Y electron\\preload.cjs dist-electron\\preload.cjs",
     "start": "vite build && tsc -p tsconfig.node.json && copy /Y electron\\preload.cjs dist-electron\\preload.cjs && electron .",
+    "lint:renderer": "tsc -p tsconfig.json --noEmit",
+    "lint:electron": "tsc -p tsconfig.node.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "package": "node scripts/generate-icon.mjs && vite build && tsc -p tsconfig.node.json && copy /Y electron\\preload.cjs dist-electron\\preload.cjs && electron-builder"
   },
   "keywords": [],
